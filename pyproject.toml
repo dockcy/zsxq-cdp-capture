@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cdp-capture"
+version = "0.1.0"
+description = "Passive CDP-based data capture — intercept browser network responses without sending HTTP requests"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+dependencies = [
+    "psycopg2-binary>=2.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "browser-harness>=0.1.0",
+]
+
+[project.scripts]
+cdp-capture = "cdp_capture.__main__:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

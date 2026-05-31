@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.pyo
+*.swp
+*.swo
+.env
+/dist/
+/build/
+*.egg-info/
+.captures/
+*.json
+*.db
+*.log
