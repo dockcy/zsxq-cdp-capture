@@ -19,11 +19,11 @@ class PostgresBackend(StorageBackend):
 
     Configuration via constructor args or environment variables:
 
-        CDP_CAPTURE_DB_NAME  (default: cdp_capture)
-        CDP_CAPTURE_DB_USER  (default: postgres)
-        CDP_CAPTURE_DB_PASSWORD
-        CDP_CAPTURE_DB_HOST  (default: 127.0.0.1)
-        CDP_CAPTURE_DB_PORT  (default: 5432)
+        ZSXQ_CDP_CAPTURE_DB_NAME  (default: cdp_capture)
+        ZSXQ_CDP_CAPTURE_DB_USER  (default: postgres)
+        ZSXQ_CDP_CAPTURE_DB_PASSWORD
+        ZSXQ_CDP_CAPTURE_DB_HOST  (default: 127.0.0.1)
+        ZSXQ_CDP_CAPTURE_DB_PORT  (default: 5432)
     """
 
     def __init__(
@@ -36,11 +36,11 @@ class PostgresBackend(StorageBackend):
         table_name: str = "records",
     ):
         self._config = {
-            "dbname": dbname or os.environ.get("CDP_CAPTURE_DB_NAME", "cdp_capture"),
-            "user": user or os.environ.get("CDP_CAPTURE_DB_USER", "postgres"),
-            "password": password or os.environ.get("CDP_CAPTURE_DB_PASSWORD", ""),
-            "host": host or os.environ.get("CDP_CAPTURE_DB_HOST", "127.0.0.1"),
-            "port": port or os.environ.get("CDP_CAPTURE_DB_PORT", "5432"),
+            "dbname": dbname or os.environ.get("ZSXQ_CDP_CAPTURE_DB_NAME", "zsxq_capture"),
+            "user": user or os.environ.get("ZSXQ_CDP_CAPTURE_DB_USER", "postgres"),
+            "password": password or os.environ.get("ZSXQ_CDP_CAPTURE_DB_PASSWORD", ""),
+            "host": host or os.environ.get("ZSXQ_CDP_CAPTURE_DB_HOST", "127.0.0.1"),
+            "port": port or os.environ.get("ZSXQ_CDP_CAPTURE_DB_PORT", "5432"),
         }
         self.table_name = table_name
         self._pool: psycopg2.pool.ThreadedConnectionPool | None = None

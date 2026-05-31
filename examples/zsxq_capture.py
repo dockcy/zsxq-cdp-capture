@@ -12,7 +12,7 @@ Environment variables:
 import json
 import os
 
-from cdp_capture import run
+from zsxq_cdp_capture import run
 
 # ---------------------------------------------------------------------------
 # Configuration

@@ -2,7 +2,7 @@
 
 Usage::
 
-    BU_CDP_URL=http://127.0.0.1:9223 cdp-capture < script.py
+    BU_CDP_URL=http://127.0.0.1:9223 zsxq-cdp-capture < script.py
 
 The library is designed to run **inside** the browser-harness runtime
 (``browser-harness < your_script.py``).  This CLI wrapper simulates that
@@ -19,19 +19,19 @@ def main() -> None:
     """Read Python code from stdin and exec in browser-harness context.
 
     This mimics what ``browser-harness < script.py`` does, but with
-    ``cdp_capture`` pre-imported.
+    ``zsxq_cdp_capture`` pre-imported.
     """
     code = sys.stdin.read()
     if not code.strip():
-        print("Usage: BU_CDP_URL=http://127.0.0.1:9223 cdp-capture < script.py", file=sys.stderr)
+        print("Usage: BU_CDP_URL=http://127.0.0.1:9223 zsxq-cdp-capture < script.py", file=sys.stderr)
         sys.exit(1)
 
-    # The cdp_capture package is already importable; inject it so
-    # user scripts can do ``from cdp_capture import run`` without
+    # The zsxq_cdp_capture package is already importable; inject it so
+    # user scripts can do ``from zsxq_cdp_capture import run`` without
     # worrying about sys.path.
-    import cdp_capture  # noqa: F401
+    import zsxq_cdp_capture  # noqa: F401
 
-    exec(code, {"cdp_capture": cdp_capture})
+    exec(code, {"zsxq_cdp_capture": zsxq_cdp_capture})
 
 
 if __name__ == "__main__":

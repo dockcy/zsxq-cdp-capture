@@ -1,4 +1,4 @@
-"""Public API for cdp-capture.
+"""Public API for zsxq-cdp-capture — 知识星球 CDP 被动抓取库."""
 
 Convenience entry points so callers don't need to wire up
 :class:`CaptureEngine` manually.

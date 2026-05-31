@@ -1,20 +1,21 @@
-# cdp-capture
+# zsxq-cdp-capture
 
-> 基于 CDP 的被动式数据抓取库 — 不主动发 HTTP 请求，反爬系统看不到你。
+> 知识星球专用 — 基于 CDP 的被动式数据抓取库，不主动发 HTTP 请求，反爬系统看不到你。
 
-Passive CDP-based data capture — intercept browser network responses
-**without sending any HTTP requests**, making your scraper invisible to
-anti-bot detection.
+zsxq (知识星球) passive CDP-based data capture — intercept browser network
+responses **without sending any HTTP requests**, making your scraper
+invisible to anti-bot detection.
 
 Built on top of [browser-harness] for CDP transport.  Your script rides
 inside a real, non-headless Chrome browser.  As the page loads and you
-scroll naturally, `cdp-capture` intercepts the API responses the browser
-receives, extracts structured data from them, and persists the results to
-**PostgreSQL**, **JSON files**, or **both**.
+scroll naturally, `zsxq-cdp-capture` intercepts the API responses the
+browser receives, extracts structured data from them, and persists the
+results to **PostgreSQL**, **JSON files**, or **both**.
 
 基于 [browser-harness] 做 CDP 传输层。你的脚本跑在一个真实的、非 headless
-的 Chrome 浏览器里。页面加载、自然滚动的过程中，`cdp-capture` 在背后偷听浏览器
-收到的 API 响应，把数据摘出来，存到 **PostgreSQL**、**JSON 文件**，或者**两者同时**。
+的 Chrome 浏览器里。页面加载、自然滚动的过程中，`zsxq-cdp-capture` 在背后偷听
+浏览器收到的 API 响应，把数据摘出来，存到 **PostgreSQL**、**JSON 文件**，
+或者**两者同时**。
 
 [browser-harness]: https://github.com/browser-use/browser-harness
 
@@ -24,14 +25,14 @@ receives, extracts structured data from them, and persists the results to
 |---|---|---|---|
 | `requests` / `httpx` | 有，Python 发出 | 是 | Python TLS |
 | Playwright / Puppeteer | 有，CDP `fetch` | 有时 | Headless 痕迹 |
-| **cdp-capture** | **无** — 偷听真实 Chrome 流量 | **否** | 真实 Chrome |
+| **zsxq-cdp-capture** | **无** — 偷听真实 Chrome 流量 | **否** | 真实 Chrome |
 
 浏览器自己发请求，你只负责听。 / The browser makes the requests.  You just listen.
 
 ## 安装 / Installation
 
 ```bash
-pip install cdp-capture
+pip install zsxq-cdp-capture
 ```
 
 还需要装 `browser-harness` 并准备一个开了 CDP 的 Chrome：
@@ -45,7 +46,7 @@ pip install browser-harness
 ```python
 """my_capture.py — 用法:  browser-harness < my_capture.py"""
 import json
-from cdp_capture import run
+from zsxq_cdp_capture import run
 
 def my_extractor(url, body):
     """解析每个拦截到的 API 响应，返回 record 列表"""
@@ -88,7 +89,7 @@ BU_CDP_URL=http://127.0.0.1:9223 browser-harness < my_capture.py
 ### 只要 PostgreSQL
 
 ```python
-from cdp_capture import run
+from zsxq_cdp_capture import run
 
 run(..., postgres=True, json_file=False)
 ```
@@ -96,7 +97,7 @@ run(..., postgres=True, json_file=False)
 ### 只要 JSON 文件
 
 ```python
-from cdp_capture import run
+from zsxq_cdp_capture import run
 
 run(..., postgres=False, json_file=True)
 ```
@@ -104,7 +105,7 @@ run(..., postgres=False, json_file=True)
 ### 两个都要（默认行为）
 
 ```python
-from cdp_capture import run
+from zsxq_cdp_capture import run
 
 run(...)  # 啥都不设，两个都开
 ```
@@ -112,7 +113,7 @@ run(...)  # 啥都不设，两个都开
 ### 自定义 PostgreSQL 连接
 
 ```python
-from cdp_capture import run
+from zsxq_cdp_capture import run
 
 run(
     ...,
@@ -211,7 +212,7 @@ def extractor(url: str, body: str) -> list[dict]:
 
 ## API 参考 / API reference
 
-### `cdp_capture.run()` — 一键入口
+### `zsxq_cdp_capture.run()` — 一键入口
 
 ```python
 def run(
@@ -234,7 +235,7 @@ def run(
 需要更细粒度的控制时直接用：
 
 ```python
-from cdp_capture import CaptureEngine, PostgresBackend, JsonFileBackend
+from zsxq_cdp_capture import CaptureEngine, PostgresBackend, JsonFileBackend
 
 engine = CaptureEngine(
     backends=[PostgresBackend(), JsonFileBackend()],
@@ -248,7 +249,7 @@ result = engine.capture("https://example.com", max_scrolls=200)
 
 ```python
 PostgresBackend(
-    dbname="cdp_capture",
+    dbname="zsxq_capture",
     user="postgres",
     password="",
     host="127.0.0.1",
@@ -285,7 +286,7 @@ JsonFileBackend(output_dir="./captures")
 ### `create_backends()` — 后端工厂
 
 ```python
-from cdp_capture import create_backends
+from zsxq_cdp_capture import create_backends
 
 backends = create_backends(
     postgres=True,
@@ -297,14 +298,14 @@ backends = create_backends(
 
 ## 配合 browser-harness 运行
 
-`cdp-capture` 用 `browser-harness` 做 CDP 传输层，你的脚本跑在 harness 里面：
+`zsxq-cdp-capture` 用 `browser-harness` 做 CDP 传输层，你的脚本跑在 harness 里面：
 
 ```bash
 BU_CDP_URL=http://127.0.0.1:9223 browser-harness < your_script.py
 ```
 
 harness 会注入全局函数（`goto_url`、`drain_events`、`cdp`、`js`、
-`wait_for_network_idle` 等），`cdp-capture` 内部直接调用它们。
+`wait_for_network_idle` 等），`zsxq-cdp-capture` 内部直接调用它们。
 
 ## 踩坑记录 / Pitfalls
 
@@ -334,11 +335,11 @@ harness 会注入全局函数（`goto_url`、`drain_events`、`cdp`、`js`、
 ## 目录结构 / Project structure
 
 ```
-cdp-capture/
+zsxq-cdp-capture/
 ├── pyproject.toml
 ├── README.md
 ├── LICENSE
-├── src/cdp_capture/
+├── src/zsxq_cdp_capture/
 │   ├── __init__.py          # 公共 API: run(), CaptureEngine, create_backends()
 │   ├── engine.py            # 引擎核心: CDP 拦截 + 滚动循环
 │   ├── __main__.py          # CLI 入口

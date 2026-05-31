@@ -4,7 +4,7 @@ The engine navigates to a target URL, intercepts API responses via CDP
 Network events, extracts data through a user-provided extractor function,
 and persists results to one or more storage backends.
 
-Usage is normally through the higher-level :func:`cdp_capture.run` entry
+Usage is normally through the higher-level :func:`zsxq_cdp_capture.run` entry
 point.  Use :class:`CaptureEngine` directly only when you need to
 customise the default lifecycle.
 """
@@ -64,7 +64,7 @@ class CaptureEngine:
     Parameters
     ----------
     backends:
-        One or more :class:`~cdp_capture.storage.StorageBackend` instances.
+        One or more :class:`~zsxq_cdp_capture.storage.StorageBackend` instances.
         All backends receive the same records.
     url_patterns:
         Substrings to match against intercepted request URLs.  Only
