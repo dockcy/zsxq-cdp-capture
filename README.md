@@ -1,5 +1,7 @@
 # cdp-capture
 
+> 基于 CDP 的被动式数据抓取库 — 不主动发 HTTP 请求，反爬系统看不到你。
+
 Passive CDP-based data capture — intercept browser network responses
 **without sending any HTTP requests**, making your scraper invisible to
 anti-bot detection.
@@ -10,40 +12,43 @@ scroll naturally, `cdp-capture` intercepts the API responses the browser
 receives, extracts structured data from them, and persists the results to
 **PostgreSQL**, **JSON files**, or **both**.
 
+基于 [browser-harness] 做 CDP 传输层。你的脚本跑在一个真实的、非 headless
+的 Chrome 浏览器里。页面加载、自然滚动的过程中，`cdp-capture` 在背后偷听浏览器
+收到的 API 响应，把数据摘出来，存到 **PostgreSQL**、**JSON 文件**，或者**两者同时**。
+
 [browser-harness]: https://github.com/browser-use/browser-harness
 
-## Why passive?
+## 为什么用被动模式？ / Why passive?
 
-| Approach | HTTP requests | Visible to WAF? | Fingerprint |
+| 方案 | HTTP 请求 | WAF 可见？ | 指纹 |
 |---|---|---|---|
-| `requests` / `httpx` | Yes, from Python | Yes | Python TLS |
-| Playwright / Puppeteer | Yes, via CDP `fetch` | Sometimes | Headless hints |
-| **cdp-capture** | **No** — intercepts real Chrome traffic | **No** | Real Chrome |
+| `requests` / `httpx` | 有，Python 发出 | 是 | Python TLS |
+| Playwright / Puppeteer | 有，CDP `fetch` | 有时 | Headless 痕迹 |
+| **cdp-capture** | **无** — 偷听真实 Chrome 流量 | **否** | 真实 Chrome |
 
-The browser makes the requests.  You just listen.
+浏览器自己发请求，你只负责听。 / The browser makes the requests.  You just listen.
 
-## Installation
+## 安装 / Installation
 
 ```bash
 pip install cdp-capture
 ```
 
-You also need `browser-harness` installed and a Chrome instance with CDP
-enabled:
+还需要装 `browser-harness` 并准备一个开了 CDP 的 Chrome：
 
 ```bash
 pip install browser-harness
 ```
 
-## Quick start
+## 快速开始 / Quick start
 
 ```python
-"""my_capture.py — run with:  browser-harness < my_capture.py"""
+"""my_capture.py — 用法:  browser-harness < my_capture.py"""
 import json
 from cdp_capture import run
 
 def my_extractor(url, body):
-    """Parse each intercepted API response into records."""
+    """解析每个拦截到的 API 响应，返回 record 列表"""
     data = json.loads(body)
     results = []
     for item in data.get("items", []):
@@ -61,58 +66,50 @@ result = run(
     url="https://example.com/data-page",
     extractor=my_extractor,
     url_patterns=["api.example.com/v1/items"],
-    json_file=True,
-    postgres=True,
+    json_file=True,   # 同时写 JSON 文件
+    postgres=True,    # 同时写 PostgreSQL
 )
-print(f"Captured {result['total_records']} records")
+print(f"抓到 {result['total_records']} 条记录")
 ```
 
 ```bash
 BU_CDP_URL=http://127.0.0.1:9223 browser-harness < my_capture.py
 ```
 
-## Storage backends
+## 存储后端 / Storage backends
 
-### Both enabled by default — you pick
+### 默认两个都开，你自己选 / Both enabled by default — you pick
 
-| Backend | Best for | Class |
+| 后端 | 适合场景 | 类 |
 |---|---|---|
-| PostgreSQL | Production, querying, large datasets | `PostgresBackend` |
-| JSON file | Debugging, portability, small datasets | `JsonFileBackend` |
+| PostgreSQL | 生产环境、大数据量、需要 SQL 查询 | `PostgresBackend` |
+| JSON 文件 | 调试、小数据、方便拷走归档 | `JsonFileBackend` |
 
-### Use only PostgreSQL
-
-```python
-from cdp_capture import run, PostgresBackend
-
-run(
-    ...,
-    backends=[PostgresBackend()],
-    # or: postgres=True, json_file=False
-)
-```
-
-### Use only JSON file
-
-```python
-from cdp_capture import run, JsonFileBackend
-
-run(
-    ...,
-    backends=[JsonFileBackend(output_dir="./my_captures")],
-    # or: postgres=False, json_file=True
-)
-```
-
-### Use both (default)
+### 只要 PostgreSQL
 
 ```python
 from cdp_capture import run
 
-run(...)  # both enabled by default
+run(..., postgres=True, json_file=False)
 ```
 
-### Custom PostgreSQL config
+### 只要 JSON 文件
+
+```python
+from cdp_capture import run
+
+run(..., postgres=False, json_file=True)
+```
+
+### 两个都要（默认行为）
+
+```python
+from cdp_capture import run
+
+run(...)  # 啥都不设，两个都开
+```
+
+### 自定义 PostgreSQL 连接
 
 ```python
 from cdp_capture import run
@@ -129,7 +126,7 @@ run(
 )
 ```
 
-Or via environment variables:
+或者用环境变量：
 
 ```bash
 export CDP_CAPTURE_DB_NAME=my_capture_db
@@ -138,9 +135,9 @@ export CDP_CAPTURE_DB_PASSWORD=secret
 export CDP_CAPTURE_DB_HOST=10.0.0.5
 ```
 
-### JSON file output
+### JSON 文件输出
 
-Files land in `./captures/` by default, named `capture_<timestamp>.json`:
+默认写到 `./captures/`，文件名 `capture_<时间戳>.json`：
 
 ```json
 {
@@ -159,92 +156,82 @@ Files land in `./captures/` by default, named `capture_<timestamp>.json`:
 }
 ```
 
-Set `json_file_dir="./output"` to change the directory.
+改输出目录设 `json_file_dir="./output"`。
 
-## Writing an extractor
+## 写 extractor / Writing an extractor
+
+**extractor 是你唯一需要写的东西**，其他的引擎全包了。
 
 The extractor is the only piece you **must** write.  Everything else is
 handled by the engine.
 
 ```python
 def extractor(url: str, body: str) -> list[dict]:
-    """Parse a response body into zero or more record dicts.
+    """解析 API 响应，返回 record dict 列表。
 
-    Each dict MUST contain a ``record_id`` key — this is used for
-    deduplication across scroll rounds.
+    每个 dict 必须包含 ``record_id`` 字段 — 用于跨滚屏去重。
     """
     ...
 ```
 
-### Record dict fields
+### record dict 字段
 
-| Key | Type | Required | Notes |
+| 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
-| `record_id` | `str` | Yes | Unique ID for dedup |
-| `title` | `str` | No | |
-| `body_text` | `str` | No | |
-| `author` | `str` | No | |
-| `author_id` | `str` | No | |
-| `source_url` | `str` | No | |
-| `record_type` | `str` | No | e.g. `"talk"`, `"question"` |
-| `create_time` | `str` | No | ISO-8601 timestamp |
-| `extra` | `dict` | No | Arbitrary JSON-serialisable data |
+| `record_id` | `str` | 是 | 唯一 ID，用于去重 |
+| `title` | `str` | 否 | 标题 |
+| `body_text` | `str` | 否 | 正文 |
+| `author` | `str` | 否 | 作者名 |
+| `author_id` | `str` | 否 | 作者 ID |
+| `source_url` | `str` | 否 | 来源链接 |
+| `record_type` | `str` | 否 | 类型，如 `"talk"`、`"question"` |
+| `create_time` | `str` | 否 | ISO-8601 时间戳 |
+| `extra` | `dict` | 否 | 任意 JSON 可序列化的额外数据 |
 
-## How it works
+## 工作原理 / How it works
 
 ```
-┌──────────┐   CDP events    ┌───────────────┐   records   ┌──────────────┐
+┌──────────┐   CDP 事件      ┌───────────────┐   records   ┌──────────────┐
 │  Chrome  │ ───────────────> │ CaptureEngine │ ──────────> │ Storage      │
-│  (real)  │  Network.*       │               │            │ Postgres +   │
+│  (真浏览器) │  Network.*      │               │            │ Postgres +   │
 │          │ <─────────────── │  • drain      │            │ JSON file    │
-│  scroll  │  Input.*         │  • getBody    │            └──────────────┘
-│  navigate│  Page.*          │  • extract    │
+│  滚动    │  Input.*         │  • getBody    │            └──────────────┘
+│  导航    │  Page.*          │  • extract    │
 └──────────┘                  │  • dedup      │
                               └───────────────┘
 ```
 
-1. **Navigate** — `goto_url()` opens the target page.  The browser
-   naturally fires API requests as the page loads.
-2. **Intercept** — CDP `Network.requestWillBeSent` and
-   `Network.loadingFinished` events tell us which URLs were fetched.
-3. **Fetch body** — `Network.getResponseBody()` grabs the raw response
-   before Chrome evicts it from memory.
-4. **Extract** — Your `extractor(url, body)` function parses the JSON
-   into structured record dicts.
-5. **Scroll** — Human-like `window.scrollBy()` triggers pagination /
-   infinite scroll APIs.  Scroll distance and timing are randomised.
-6. **Adaptive stop** — When N consecutive scroll rounds yield zero new
-   records, the engine stops.  A hard `max_scrolls` cap prevents
-   infinite loops.
-7. **Persist** — Records are flushed to PostgreSQL (upsert) and/or a
-   timestamped JSON file.
+1. **导航** — `goto_url()` 打开目标页面，浏览器自然发出 API 请求。
+2. **拦截** — CDP `Network.requestWillBeSent` 和 `Network.loadingFinished` 事件告诉我们哪些 URL 被请求了。
+3. **捞 body** — `Network.getResponseBody()` 在 Chrome 释放内存之前把响应体捞出来。
+4. **提取** — 你的 `extractor(url, body)` 函数把 JSON 解析成结构化的 record dict。
+5. **滚动** — 模拟真人的 `window.scrollBy()` 触发分页/无限滚动，滚动距离和时间随机化。
+6. **自适应停止** — 连续 N 轮滚屏没新数据就自动停，`max_scrolls` 作为硬上限兜底。
+7. **持久化** — 数据批量写入 PostgreSQL（upsert）和/或时间戳 JSON 文件。
 
-## API reference
+## API 参考 / API reference
 
-### `cdp_capture.run()`
-
-The one-shot convenience entry point.
+### `cdp_capture.run()` — 一键入口
 
 ```python
 def run(
-    url: str,
-    extractor: Extractor,
+    url: str,                              # 目标页面 URL
+    extractor: Extractor,                  # 你的解析函数
     *,
-    url_patterns: list[str] | None = None,
-    backends: list[StorageBackend] | None = None,
-    postgres: bool = True,
-    json_file: bool = True,
-    postgres_config: dict | None = None,
-    json_file_dir: str = "./captures",
-    max_scrolls: int = 100,
-    stale_threshold: int = 50,
+    url_patterns: list[str] | None = None, # 只拦截匹配这些字符串的 URL
+    backends: list[StorageBackend] | None = None,  # 自定义后端列表
+    postgres: bool = True,                 # 是否启用 PostgreSQL
+    json_file: bool = True,                # 是否启用 JSON 文件
+    postgres_config: dict | None = None,   # PG 连接参数
+    json_file_dir: str = "./captures",     # JSON 输出目录
+    max_scrolls: int = 100,                # 最大滚动次数
+    stale_threshold: int = 50,             # 连续无新数据轮数阈值
 ) -> dict
 ```
 
-### `CaptureEngine`
+### `CaptureEngine` — 引擎类
 
-The class behind `run()`.  Use directly when you need fine-grained
-control.
+需要更细粒度的控制时直接用：
 
 ```python
 from cdp_capture import CaptureEngine, PostgresBackend, JsonFileBackend
@@ -257,7 +244,7 @@ engine = CaptureEngine(
 result = engine.capture("https://example.com", max_scrolls=200)
 ```
 
-### `PostgresBackend`
+### `PostgresBackend` — PostgreSQL 后端
 
 ```python
 PostgresBackend(
@@ -270,33 +257,32 @@ PostgresBackend(
 )
 ```
 
-Table schema (auto-created on `init()`):
+表结构（`init()` 时自动创建）：
 
-| Column | Type | Notes |
+| 列 | 类型 | 说明 |
 |---|---|---|
-| `id` | `BIGSERIAL PK` | Auto-increment |
-| `record_id` | `VARCHAR(255) UNIQUE` | Dedup key |
-| `source_url` | `TEXT` | |
-| `title` | `TEXT` | |
-| `body_text` | `TEXT` | |
-| `author` | `VARCHAR(255)` | |
-| `author_id` | `VARCHAR(255)` | |
-| `record_type` | `VARCHAR(50)` | e.g. talk, question |
-| `create_time` | `TIMESTAMPTZ` | Original timestamp |
-| `extra` | `JSONB` | Arbitrary metadata |
-| `captured_at` | `TIMESTAMPTZ` | When we saved it |
-| `updated_at` | `TIMESTAMPTZ` | Last upsert time |
+| `id` | `BIGSERIAL PK` | 自增主键 |
+| `record_id` | `VARCHAR(255) UNIQUE` | 去重键 |
+| `source_url` | `TEXT` | 来源 URL |
+| `title` | `TEXT` | 标题 |
+| `body_text` | `TEXT` | 正文 |
+| `author` | `VARCHAR(255)` | 作者 |
+| `author_id` | `VARCHAR(255)` | 作者 ID |
+| `record_type` | `VARCHAR(50)` | 类型 |
+| `create_time` | `TIMESTAMPTZ` | 原始时间戳 |
+| `extra` | `JSONB` | 任意附加数据 |
+| `captured_at` | `TIMESTAMPTZ` | 抓取时间 |
+| `updated_at` | `TIMESTAMPTZ` | 最后 upsert 时间 |
 
-### `JsonFileBackend`
+### `JsonFileBackend` — JSON 文件后端
 
 ```python
 JsonFileBackend(output_dir="./captures")
 ```
 
-Records are buffered in memory during capture and flushed to a
-timestamped JSON file on `close()`.
+抓取期间数据在内存缓存，`close()` 时一次性写入时间戳命名的 JSON 文件。
 
-### `create_backends()`
+### `create_backends()` — 后端工厂
 
 ```python
 from cdp_capture import create_backends
@@ -309,47 +295,61 @@ backends = create_backends(
 )
 ```
 
-## Running with browser-harness
+## 配合 browser-harness 运行
 
-`cdp-capture` uses `browser-harness` as its CDP transport.  Your script
-runs inside the harness:
+`cdp-capture` 用 `browser-harness` 做 CDP 传输层，你的脚本跑在 harness 里面：
 
 ```bash
 BU_CDP_URL=http://127.0.0.1:9223 browser-harness < your_script.py
 ```
 
-The harness injects global functions (`goto_url`, `drain_events`, `cdp`,
-`js`, `wait_for_network_idle`, etc.) that `cdp-capture` calls internally.
+harness 会注入全局函数（`goto_url`、`drain_events`、`cdp`、`js`、
+`wait_for_network_idle` 等），`cdp-capture` 内部直接调用它们。
 
-See [browser-harness] for setup instructions (Chrome with
-`--remote-debugging-port`, Docker Compose, or cloud browsers).
+## 踩坑记录 / Pitfalls
 
-## Pitfalls
+这些是从生产环境实战中踩出来的坑，**用之前先读一遍**。
 
-These are extracted from real-world experience running CDP captures in
-production.  Read them **before** you hit them.
+> These are extracted from real-world production experience.  Read them
+> **before** you hit them.
 
-1. **Drain before idle.**  `wait_for_network_idle()` calls
-   `drain_events()` internally and discards the events.  Always drain
-   BEFORE waiting for idle, then drain again after.
+1. **先 drain 再 idle。** `wait_for_network_idle()` 内部会调 `drain_events()`
+   并把事件丢掉。一定要在等 idle **之前**先 drain，idle 之后再 drain 一次。
 
-2. **`getResponseBody` is ephemeral.**  Chrome frees response body
-   memory seconds after `loadingFinished`.  Fetch the body in the same
-   drain cycle — don't defer it.
+2. **`getResponseBody` 是过时不候的。** Chrome 在 `loadingFinished` 后几秒
+   就会释放响应体内存。必须在同一轮 drain 里把 body 捞出来，不要攒到后面。
 
-3. **Don't probe `scrollHeight`.**  Calling `page_info()` or
-   `Runtime.evaluate` to check page height triggers anti-bot heuristics.
-   Use the adaptive stale-round counter instead.
+3. **别探 `scrollHeight`。** 调 `page_info()` 或 `Runtime.evaluate` 去查
+   页面高度会触发反爬检测。用自适应 stale 计数器来判断翻完了没有。
 
-4. **Event buffer is finite.**  The browser-harness daemon caps its
-   event buffer at 500 entries (FIFO).  On high-traffic pages, drain
-   frequently (every 100–200 ms in tight loops).
+4. **事件缓冲区有上限。** browser-harness daemon 的事件缓冲区只有 500 条
+   （FIFO）。高流量页面要高频 drain（紧循环里每 100-200ms 一次）。
 
-5. **PostgreSQL autocommit.**  The `PostgresBackend` manages
-   transactions internally.  Don't wrap it in your own transaction.
+5. **PostgreSQL 自动提交。** `PostgresBackend` 内部管理事务，外面不要再包
+   事务。
 
-6. **`record_id` must be a string.**  The dedup dict uses string keys.
-   Cast integer IDs with `str()`.
+6. **`record_id` 必须是字符串。** 去重字典用字符串 key，数字 ID 要
+   `str()` 转换。
+
+## 目录结构 / Project structure
+
+```
+cdp-capture/
+├── pyproject.toml
+├── README.md
+├── LICENSE
+├── src/cdp_capture/
+│   ├── __init__.py          # 公共 API: run(), CaptureEngine, create_backends()
+│   ├── engine.py            # 引擎核心: CDP 拦截 + 滚动循环
+│   ├── __main__.py          # CLI 入口
+│   └── storage/
+│       ├── __init__.py      # create_backends() 工厂函数
+│       ├── base.py          # StorageBackend 抽象基类
+│       ├── postgres.py      # PostgreSQL 后端（连接池 + upsert）
+│       └── json_file.py     # JSON 文件后端（内存缓存 + 时间戳文件）
+└── examples/
+    └── zsxq_capture.py      # 真实案例：知识星球抓取
+```
 
 ## License
 
