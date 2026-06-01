@@ -41,6 +41,29 @@ pip install zsxq-cdp-capture
 pip install browser-harness
 ```
 
+### 无桌面的服务器怎么办？
+
+如果你是在 Ubuntu 等纯后台服务器上跑，没有桌面环境，可以用 Docker 一键搭一个带
+Chrome + CDP + noVNC 远程桌面的浏览器环境：
+
+**[ubuntu-chrome-vnc-docker]** — Docker 化浏览器，Xvfb + Openbox + Chrome +
+CDP 代理 + noVNC Web 远程桌面，开箱即用。
+
+```bash
+git clone https://github.com/dockcy/ubuntu-chrome-vnc-docker.git
+cd ubuntu-chrome-vnc-docker/docker-browser
+sudo docker compose up -d
+# CDP 端口 -> 127.0.0.1:9223，noVNC -> http://host:18080/vnc.html
+```
+
+然后设好 `BU_CDP_URL` 就能跑了：
+
+```bash
+BU_CDP_URL=http://127.0.0.1:9223 browser-harness < your_script.py
+```
+
+[ubuntu-chrome-vnc-docker]: https://github.com/dockcy/ubuntu-chrome-vnc-docker.git
+
 ## 快速开始 / Quick start
 
 ```python
